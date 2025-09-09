@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe Quantistico</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: white;
+        }
+
+        .container {
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .game-info {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .current-player {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .mode-selector {
+            margin-bottom: 15px;
+        }
+
+        .mode-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .mode-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .mode-btn.active {
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(1.05);
+        }
+
+        .mode-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .cell {
+            aspect-ratio: 1;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1.5rem;
+            font-weight: bold;
+            position: relative;
+            min-height: 80px;
+            user-select: none;
+        }
+
+        .cell:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+
+        .cell.selected {
+            background: rgba(255, 255, 0, 0.3);
+            border-color: #ffff00;
+            box-shadow: 0 0 15px rgba(255, 255, 0, 0.5);
+        }
+
+        .cell.quantum {
+            background: rgba(255, 0, 255, 0.2);
+            border-color: #ff00ff;
+        }
+
+        .quantum-symbols {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 0.8rem;
+            line-height: 1.2;
+        }
+
+        .classical-symbol {
+            font-size: 2rem;
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            font-weight: bold;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status {
+            text-align: center;
+            font-size: 1.1rem;
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+
+        .winner {
+            animation: pulse 2s infinite;
+            font-size: 1.3rem;
+            font-weight: bold;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .instructions h3 {
+            margin-bottom: 10px;
+            color: #ffff99;
+        }
+
+        .instructions ul {
+            margin-left: 20px;
+        }
+
+        .instructions li {
+            margin-bottom: 5px;
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .cell {
+                min-height: 70px;
+                font-size: 1.2rem;
+            }
+            
+            .classical-symbol {
+                font-size: 1.5rem;
+            }
+            
+            .quantum-symbols {
+                font-size: 0.7rem;
+            }
+            
+            .btn {
+                padding: 10px 20px;
+                font-size: 0.9rem;
+            }
+            
+            .instructions {
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚛️ Tic Tac Toe Quantistico</h1>
+        
+        <div class="game-info">
+            <div class="current-player" id="currentPlayer">Turno di: X</div>
+            
+            <div class="mode-selector">
+                <div class="mode-buttons">
+                    <button class="mode-btn active" id="classicalBtn">Classica</button>
+                    <button class="mode-btn" id="quantumBtn">Quantistica</button>
+                </div>
+            </div>
+            
+            <div id="moveStatus">Seleziona una casella</div>
+        </div>
+
+        <div class="grid" id="grid"></div>
+
+        <div class="controls">
+            <button class="btn" id="resetBtn">Nuova Partita</button>
+            <button class="btn" id="collapseBtn" disabled>Collassa Griglia</button>
+        </div>
+
+        <div class="status" id="gameStatus">Gioco in corso</div>
+
+        <div class="instructions">
+            <h3>Come giocare:</h3>
+            <ul>
+                <li><strong>Mossa Classica:</strong> Clicca su una casella vuota</li>
+                <li><strong>Mossa Quantistica:</strong> Seleziona due caselle per creare una sovrapposizione</li>
+                <li><strong>Collasso:</strong> Quando la griglia è piena, le sovrapposizioni si risolvono casualmente</li>
+                <li><strong>Vittoria:</strong> Tre simboli in fila dopo il collasso</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        class QuantumTicTacToe {
+            constructor() {
+                this.grid = Array(9).fill(null).map(() => ({ 
+                    classical: null, 
+                    quantum: new Set() 
+                }));
+                this.currentPlayer = 'X';
+                this.gameMode = 'classical';
+                this.selectedCells = [];
+                this.gameOver = false;
+                this.moveCounter = 0;
+                
+                this.initializeGame();
+            }
+
+            initializeGame() {
+                this.createGrid();
+                this.setupEventListeners();
+                this.updateDisplay();
+            }
+
+            createGrid() {
+                const gridElement = document.getElementById('grid');
+                gridElement.innerHTML = '';
+                
+                for (let i = 0; i < 9; i++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.index = i;
+                    cell.addEventListener('click', () => this.handleCellClick(i));
+                    gridElement.appendChild(cell);
+                }
+            }
+
+            setupEventListeners() {
+                document.getElementById('classicalBtn').addEventListener('click', () => {
+                    this.setGameMode('classical');
+                });
+                
+                document.getElementById('quantumBtn').addEventListener('click', () => {
+                    this.setGameMode('quantum');
+                });
+                
+                document.getElementById('resetBtn').addEventListener('click', () => {
+                    this.resetGame();
+                });
+                
+                document.getElementById('collapseBtn').addEventListener('click', () => {
+                    this.collapseGrid();
+                });
+            }
+
+            setGameMode(mode) {
+                this.gameMode = mode;
+                this.selectedCells = [];
+                
+                document.querySelectorAll('.mode-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                
+                document.getElementById(mode === 'classical' ? 'classicalBtn' : 'quantumBtn')
+                    .classList.add('active');
+                
+                this.updateDisplay();
+            }
+
+            handleCellClick(index) {
+                if (this.gameOver) return;
+
+                const cell = this.grid[index];
+                
+                if (this.gameMode === 'classical') {
+                    this.makeClassicalMove(index);
+                } else {
+                    this.makeQuantumMove(index);
+                }
+            }
+
+            makeClassicalMove(index) {
+                const cell = this.grid[index];
+                
+                // Non puoi fare una mossa classica su una casella già occupata classicamente
+                if (cell.classical !== null) return;
+                
+                cell.classical = this.currentPlayer;
+                this.moveCounter++;
+                this.switchPlayer();
+                this.updateDisplay();
+                this.checkWinner();
+            }
+
+            makeQuantumMove(index) {
+                const cell = this.grid[index];
+                
+                // Gestione della selezione per mossa quantistica
+                if (this.selectedCells.includes(index)) {
+                    // Deseleziona se già selezionata
+                    this.selectedCells = this.selectedCells.filter(i => i !== index);
+                } else {
+                    if (this.selectedCells.length < 2) {
+                        this.selectedCells.push(index);
+                    } else {
+                        // Se già due caselle selezionate, sostituisci la prima
+                        this.selectedCells = [this.selectedCells[1], index];
+                    }
+                }
+
+                // Se abbiamo selezionato due caselle, fai la mossa quantistica
+                if (this.selectedCells.length === 2) {
+                    this.executeQuantumMove();
+                }
+
+                this.updateDisplay();
+            }
+
+            executeQuantumMove() {
+                const [cell1Index, cell2Index] = this.selectedCells;
+                const moveId = `${this.currentPlayer}${this.moveCounter}`;
+                
+                // Aggiungi la sovrapposizione quantistica a entrambe le caselle
+                this.grid[cell1Index].quantum.add(moveId);
+                this.grid[cell2Index].quantum.add(moveId);
+                
+                this.moveCounter++;
+                this.selectedCells = [];
+                this.switchPlayer();
+                
+                // Controlla se la griglia è piena di sovrapposizioni
+                if (this.isGridFull()) {
+                    document.getElementById('collapseBtn').disabled = false;
+                }
+            }
+
+            isGridFull() {
+                return this.grid.every(cell => 
+                    cell.classical !== null || cell.quantum.size > 0
+                );
+            }
+
+            collapseGrid() {
+                // Risolvi le sovrapposizioni quantistiche casualmente
+                const moves = new Map();
+                
+                // Raccoglie tutte le mosse quantistiche
+                this.grid.forEach((cell, index) => {
+                    cell.quantum.forEach(moveId => {
+                        if (!moves.has(moveId)) {
+                            moves.set(moveId, []);
+                        }
+                        moves.get(moveId).push(index);
+                    });
+                });
+
+                // Risolvi ogni mossa quantistica scegliendo casualmente una delle due posizioni
+                moves.forEach((positions, moveId) => {
+                    if (positions.length === 2) {
+                        const chosenPosition = positions[Math.floor(Math.random() * 2)];
+                        const player = moveId.charAt(0);
+                        
+                        // Solo se la casella scelta non è già occupata classicamente
+                        if (this.grid[chosenPosition].classical === null) {
+                            this.grid[chosenPosition].classical = player;
+                        }
+                    }
+                });
+
+                // Pulisci tutte le sovrapposizioni quantistiche
+                this.grid.forEach(cell => {
+                    cell.quantum.clear();
+                });
+
+                document.getElementById('collapseBtn').disabled = true;
+                this.updateDisplay();
+                this.checkWinner();
+            }
+
+            switchPlayer() {
+                this.currentPlayer = this.currentPlayer === 'X' ? 'O' : 'X';
+            }
+
+            updateDisplay() {
+                // Aggiorna il display del giocatore corrente
+                document.getElementById('currentPlayer').textContent = 
+                    `Turno di: ${this.currentPlayer}`;
+
+                // Aggiorna lo status della mossa
+                let moveStatus = '';
+                if (this.gameMode === 'quantum') {
+                    if (this.selectedCells.length === 0) {
+                        moveStatus = 'Seleziona la prima casella per la mossa quantistica';
+                    } else if (this.selectedCells.length === 1) {
+                        moveStatus = 'Seleziona la seconda casella per completare la mossa';
+                    }
+                } else {
+                    moveStatus = 'Seleziona una casella per la mossa classica';
+                }
+                document.getElementById('moveStatus').textContent = moveStatus;
+
+                // Aggiorna le caselle
+                const cells = document.querySelectorAll('.cell');
+                cells.forEach((cellElement, index) => {
+                    const cell = this.grid[index];
+                    cellElement.innerHTML = '';
+                    cellElement.className = 'cell';
+
+                    // Evidenzia le caselle selezionate
+                    if (this.selectedCells.includes(index)) {
+                        cellElement.classList.add('selected');
+                    }
+
+                    // Mostra il contenuto della casella
+                    if (cell.classical !== null) {
+                        // Simbolo classico
+                        const symbol = document.createElement('div');
+                        symbol.className = 'classical-symbol';
+                        symbol.textContent = cell.classical;
+                        cellElement.appendChild(symbol);
+                    } else if (cell.quantum.size > 0) {
+                        // Simboli quantistici
+                        cellElement.classList.add('quantum');
+                        const quantumDiv = document.createElement('div');
+                        quantumDiv.className = 'quantum-symbols';
+                        
+                        Array.from(cell.quantum).forEach(moveId => {
+                            const player = moveId.charAt(0);
+                            const moveNum = moveId.substring(1);
+                            const span = document.createElement('div');
+                            span.textContent = `${player}${moveNum}`;
+                            span.style.color = player === 'X' ? '#ff6b6b' : '#4ecdc4';
+                            quantumDiv.appendChild(span);
+                        });
+                        
+                        cellElement.appendChild(quantumDiv);
+                    }
+                });
+            }
+
+            checkWinner() {
+                const winPatterns = [
+                    [0, 1, 2], [3, 4, 5], [6, 7, 8], // righe
+                    [0, 3, 6], [1, 4, 7], [2, 5, 8], // colonne
+                    [0, 4, 8], [2, 4, 6] // diagonali
+                ];
+
+                for (const pattern of winPatterns) {
+                    const [a, b, c] = pattern;
+                    const cellA = this.grid[a].classical;
+                    const cellB = this.grid[b].classical;
+                    const cellC = this.grid[c].classical;
+
+                    if (cellA && cellA === cellB && cellB === cellC) {
+                        this.gameOver = true;
+                        document.getElementById('gameStatus').innerHTML = 
+                            `<div class="winner">🎉 ${cellA} ha vinto! 🎉</div>`;
+                        return;
+                    }
+                }
+
+                // Controlla pareggio
+                if (this.grid.every(cell => cell.classical !== null)) {
+                    this.gameOver = true;
+                    document.getElementById('gameStatus').innerHTML = 
+                        `<div class="winner">🤝 Pareggio! 🤝</div>`;
+                }
+            }
+
+            resetGame() {
+                this.grid = Array(9).fill(null).map(() => ({ 
+                    classical: null, 
+                    quantum: new Set() 
+                }));
+                this.currentPlayer = 'X';
+                this.selectedCells = [];
+                this.gameOver = false;
+                this.moveCounter = 0;
+                
+                document.getElementById('collapseBtn').disabled = true;
+                document.getElementById('gameStatus').textContent = 'Gioco in corso';
+                
+                this.updateDisplay();
+            }
+        }
+
+        // Avvia il gioco quando la pagina è caricata
+        document.addEventListener('DOMContentLoaded', () => {
+            new QuantumTicTacToe();
+        });
+    </script>
+</body>
+</html>
