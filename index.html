@@ -255,15 +255,7 @@
         
         <div class="game-info">
             <div class="current-player" id="currentPlayer">Turno di: X</div>
-            
-            <div class="mode-selector">
-                <div class="mode-buttons">
-                    <button class="mode-btn active" id="classicalBtn">Classica</button>
-                    <button class="mode-btn" id="quantumBtn">Quantistica</button>
-                </div>
-            </div>
-            
-            <div id="moveStatus">Seleziona una casella</div>
+            <div id="moveStatus">Tocca o trascina una casella</div>
         </div>
 
         <div class="grid" id="grid"></div>
@@ -274,16 +266,6 @@
         </div>
 
         <div class="status" id="gameStatus">Gioco in corso</div>
-
-        <div class="instructions">
-            <h3>Come giocare:</h3>
-            <ul>
-                <li><strong>Mossa Classica:</strong> Clicca su una casella vuota</li>
-                <li><strong>Mossa Quantistica:</strong> Seleziona due caselle per creare una sovrapposizione</li>
-                <li><strong>Collasso:</strong> Quando la griglia è piena, le sovrapposizioni si risolvono casualmente</li>
-                <li><strong>Vittoria:</strong> Tre simboli in fila dopo il collasso</li>
-            </ul>
-        </div>
     </div>
 
     <script>
@@ -294,10 +276,11 @@
                     quantum: new Set() 
                 }));
                 this.currentPlayer = 'X';
-                this.gameMode = 'classical';
-                this.selectedCells = [];
                 this.gameOver = false;
                 this.moveCounter = 0;
+
+                this.dragStartIndex = null;
+                this.dragEndIndex = null;
                 
                 this.initializeGame();
             }
@@ -306,6 +289,12 @@
                 this.createGrid();
                 this.setupEventListeners();
                 this.updateDisplay();
+
+                const gridElement = document.getElementById('grid');
+                gridElement.addEventListener('touchstart', (e) => this.onTouchStart(e));
+                gridElement.addEventListener('touchend', (e) => this.onTouchEnd(e));
+                gridElement.addEventListener('mousedown', (e) => this.onTouchStart(e));
+                gridElement.addEventListener('mouseup', (e) => this.onTouchEnd(e));
             }
 
             createGrid() {
@@ -316,20 +305,11 @@
                     const cell = document.createElement('div');
                     cell.className = 'cell';
                     cell.dataset.index = i;
-                    cell.addEventListener('click', () => this.handleCellClick(i));
                     gridElement.appendChild(cell);
                 }
             }
 
             setupEventListeners() {
-                document.getElementById('classicalBtn').addEventListener('click', () => {
-                    this.setGameMode('classical');
-                });
-                
-                document.getElementById('quantumBtn').addEventListener('click', () => {
-                    this.setGameMode('quantum');
-                });
-                
                 document.getElementById('resetBtn').addEventListener('click', () => {
                     this.resetGame();
                 });
@@ -339,82 +319,55 @@
                 });
             }
 
-            setGameMode(mode) {
-                this.gameMode = mode;
-                this.selectedCells = [];
-                
-                document.querySelectorAll('.mode-btn').forEach(btn => {
-                    btn.classList.remove('active');
-                });
-                
-                document.getElementById(mode === 'classical' ? 'classicalBtn' : 'quantumBtn')
-                    .classList.add('active');
-                
-                this.updateDisplay();
+            onTouchStart(e) {
+                const target = e.target.closest('.cell');
+                if (!target) return;
+                this.dragStartIndex = parseInt(target.dataset.index);
+                this.dragEndIndex = null;
             }
 
-            handleCellClick(index) {
-                if (this.gameOver) return;
+            onTouchEnd(e) {
+                const target = e.changedTouches ? document.elementFromPoint(
+                    e.changedTouches[0].clientX,
+                    e.changedTouches[0].clientY
+                ) : e.target;
 
-                const cell = this.grid[index];
-                
-                if (this.gameMode === 'classical') {
-                    this.makeClassicalMove(index);
+                const cell = target.closest('.cell');
+                if (!cell) return;
+
+                this.dragEndIndex = parseInt(cell.dataset.index);
+
+                if (this.dragStartIndex === null) return;
+
+                if (this.dragStartIndex === this.dragEndIndex) {
+                    this.makeClassicalMove(this.dragStartIndex);
                 } else {
-                    this.makeQuantumMove(index);
+                    this.makeQuantumMovePair(this.dragStartIndex, this.dragEndIndex);
                 }
+
+                this.dragStartIndex = null;
+                this.dragEndIndex = null;
+                this.updateDisplay();
+                this.checkWinner();
             }
 
             makeClassicalMove(index) {
                 const cell = this.grid[index];
-                
-                // Non puoi fare una mossa classica su una casella già occupata classicamente
                 if (cell.classical !== null) return;
                 
                 cell.classical = this.currentPlayer;
                 this.moveCounter++;
                 this.switchPlayer();
-                this.updateDisplay();
-                this.checkWinner();
             }
 
-            makeQuantumMove(index) {
-                const cell = this.grid[index];
-                
-                // Gestione della selezione per mossa quantistica
-                if (this.selectedCells.includes(index)) {
-                    // Deseleziona se già selezionata
-                    this.selectedCells = this.selectedCells.filter(i => i !== index);
-                } else {
-                    if (this.selectedCells.length < 2) {
-                        this.selectedCells.push(index);
-                    } else {
-                        // Se già due caselle selezionate, sostituisci la prima
-                        this.selectedCells = [this.selectedCells[1], index];
-                    }
-                }
-
-                // Se abbiamo selezionato due caselle, fai la mossa quantistica
-                if (this.selectedCells.length === 2) {
-                    this.executeQuantumMove();
-                }
-
-                this.updateDisplay();
-            }
-
-            executeQuantumMove() {
-                const [cell1Index, cell2Index] = this.selectedCells;
+            makeQuantumMovePair(index1, index2) {
                 const moveId = `${this.currentPlayer}${this.moveCounter}`;
-                
-                // Aggiungi la sovrapposizione quantistica a entrambe le caselle
-                this.grid[cell1Index].quantum.add(moveId);
-                this.grid[cell2Index].quantum.add(moveId);
+                this.grid[index1].quantum.add(moveId);
+                this.grid[index2].quantum.add(moveId);
                 
                 this.moveCounter++;
-                this.selectedCells = [];
                 this.switchPlayer();
-                
-                // Controlla se la griglia è piena di sovrapposizioni
+
                 if (this.isGridFull()) {
                     document.getElementById('collapseBtn').disabled = false;
                 }
@@ -427,10 +380,8 @@
             }
 
             collapseGrid() {
-                // Risolvi le sovrapposizioni quantistiche casualmente
                 const moves = new Map();
                 
-                // Raccoglie tutte le mosse quantistiche
                 this.grid.forEach((cell, index) => {
                     cell.quantum.forEach(moveId => {
                         if (!moves.has(moveId)) {
@@ -440,20 +391,17 @@
                     });
                 });
 
-                // Risolvi ogni mossa quantistica scegliendo casualmente una delle due posizioni
                 moves.forEach((positions, moveId) => {
                     if (positions.length === 2) {
                         const chosenPosition = positions[Math.floor(Math.random() * 2)];
                         const player = moveId.charAt(0);
                         
-                        // Solo se la casella scelta non è già occupata classicamente
                         if (this.grid[chosenPosition].classical === null) {
                             this.grid[chosenPosition].classical = player;
                         }
                     }
                 });
 
-                // Pulisci tutte le sovrapposizioni quantistiche
                 this.grid.forEach(cell => {
                     cell.quantum.clear();
                 });
@@ -468,44 +416,21 @@
             }
 
             updateDisplay() {
-                // Aggiorna il display del giocatore corrente
                 document.getElementById('currentPlayer').textContent = 
                     `Turno di: ${this.currentPlayer}`;
 
-                // Aggiorna lo status della mossa
-                let moveStatus = '';
-                if (this.gameMode === 'quantum') {
-                    if (this.selectedCells.length === 0) {
-                        moveStatus = 'Seleziona la prima casella per la mossa quantistica';
-                    } else if (this.selectedCells.length === 1) {
-                        moveStatus = 'Seleziona la seconda casella per completare la mossa';
-                    }
-                } else {
-                    moveStatus = 'Seleziona una casella per la mossa classica';
-                }
-                document.getElementById('moveStatus').textContent = moveStatus;
-
-                // Aggiorna le caselle
                 const cells = document.querySelectorAll('.cell');
                 cells.forEach((cellElement, index) => {
                     const cell = this.grid[index];
                     cellElement.innerHTML = '';
                     cellElement.className = 'cell';
 
-                    // Evidenzia le caselle selezionate
-                    if (this.selectedCells.includes(index)) {
-                        cellElement.classList.add('selected');
-                    }
-
-                    // Mostra il contenuto della casella
                     if (cell.classical !== null) {
-                        // Simbolo classico
                         const symbol = document.createElement('div');
                         symbol.className = 'classical-symbol';
                         symbol.textContent = cell.classical;
                         cellElement.appendChild(symbol);
                     } else if (cell.quantum.size > 0) {
-                        // Simboli quantistici
                         cellElement.classList.add('quantum');
                         const quantumDiv = document.createElement('div');
                         quantumDiv.className = 'quantum-symbols';
@@ -526,9 +451,9 @@
 
             checkWinner() {
                 const winPatterns = [
-                    [0, 1, 2], [3, 4, 5], [6, 7, 8], // righe
-                    [0, 3, 6], [1, 4, 7], [2, 5, 8], // colonne
-                    [0, 4, 8], [2, 4, 6] // diagonali
+                    [0, 1, 2], [3, 4, 5], [6, 7, 8],
+                    [0, 3, 6], [1, 4, 7], [2, 5, 8],
+                    [0, 4, 8], [2, 4, 6]
                 ];
 
                 for (const pattern of winPatterns) {
@@ -545,7 +470,6 @@
                     }
                 }
 
-                // Controlla pareggio
                 if (this.grid.every(cell => cell.classical !== null)) {
                     this.gameOver = true;
                     document.getElementById('gameStatus').innerHTML = 
@@ -559,7 +483,6 @@
                     quantum: new Set() 
                 }));
                 this.currentPlayer = 'X';
-                this.selectedCells = [];
                 this.gameOver = false;
                 this.moveCounter = 0;
                 
@@ -570,7 +493,6 @@
             }
         }
 
-        // Avvia il gioco quando la pagina è caricata
         document.addEventListener('DOMContentLoaded', () => {
             new QuantumTicTacToe();
         });
